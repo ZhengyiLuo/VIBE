@@ -253,7 +253,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--vid_list', type=str,
+    parser.add_argument('--video_list', type=str,
                         help='input list with paths of videos')
 
     parser.add_argument('--output_folder', type=str,
