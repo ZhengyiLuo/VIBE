@@ -53,7 +53,7 @@ def main(args):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     print(f'Loading video list {args.video_list}')
-    video_list = [l.strip() for l in open(args.vid_list, 'r').readlines()]
+    video_list = [l.strip() for l in open(args.video_list, 'r').readlines()]
     if len(video_list) < 1:
         print('No files were found in video list')
         return
