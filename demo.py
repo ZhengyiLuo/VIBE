@@ -48,6 +48,7 @@ from lib.utils.demo_utils import (
 MIN_NUM_FRAMES = 25
 
 def main(args):
+    torch.cuda.set_device(args.gpu_id)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     video_file = args.vid_file
@@ -377,6 +378,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--save_obj', action='store_true',
                         help='save results as .obj files.')
+
+    parser.add_argument('--gpu_id', type=int, default=0,
+                        help='process the video list with the specified GPU id')
 
     args = parser.parse_args()
 
