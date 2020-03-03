@@ -7,6 +7,7 @@ from tqdm import tqdm
 from glob import glob
 
 TRAINING_SUBJECT_IDS = [1, 2, 4, 5, 8, 9, 13, 14, 15, 16, 17, 18, 19, 25, 27, 28, 31, 34, 35, 38]
+NTU_NUM_CLASSES = 60
 
 def get_subject_id(filename):
     return int(filename[9:12])
@@ -40,16 +41,16 @@ def main(args):
         pkl_data = joblib.load(file_path)
         data = pkl_data[list(pkl_data.keys())[0]]
 
-        extracted_data_dict = dict()
+        extracted_data = dict()
         for field in target_fields:
-            extracted_data_dict[field] = data[field]
+            extracted_data[field] = data[field]
         extracted_data['label'] = get_class_id(filename)
-        extracted_data['label_onehot'] = build_one_hot(extracted_data['label'])
+        extracted_data['label_onehot'] = build_one_hot(NTU_NUM_CLASSES, extracted_data['label'])
 
         if subject_id in TRAINING_SUBJECT_IDS:
-            training_data[filename] = extracted_data_dict
+            training_data[filename] = extracted_data
         else:
-            testing_data[filename] = extracted_data_dict
+            testing_data[filename] = extracted_data
 
         break    
     pbar.close()
