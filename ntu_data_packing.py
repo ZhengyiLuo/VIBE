@@ -55,8 +55,8 @@ def main(args):
         break    
     pbar.close()
 
-    pkl.dump(training_data, open(osp.join(args.output_path, 'train_vibe_ntu.pkl'), 'wb'))
-    pkl.dump(testing_data, open(osp.join(args.output_path, 'test_vibe_ntu.pkl'), 'wb'))
+    pkl.dump(training_data, open(osp.join(args.output_dir, 'train_vibe_ntu.pkl'), 'wb'))
+    pkl.dump(testing_data, open(osp.join(args.output_dir, 'test_vibe_ntu.pkl'), 'wb'))
 
 
 if __name__ == '__main__':
