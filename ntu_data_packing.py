@@ -33,9 +33,10 @@ def main(args):
     pbar = tqdm(all_file_list)
 
     for file_path in pbar:
-        pbar.set_description(f'Processing {file_path}')
         filename, _ = osp.splitext(osp.basename(file_path))
         subject_id = get_subject_id(filename)
+        pbar.set_description(f'Processing {filename}')
+
         pkl_data = joblib.load(file_path)
         data = pkl_data(list(pkl_data.keys())[0])
 
