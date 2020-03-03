@@ -26,6 +26,16 @@ def build_one_hot(num_classes, class_idx):
     return one_hot
 
 
+def pad_pose_seq(min_len, pose_seq):
+    seq_len, pose_len = pose_seq.shape
+    if seq_len < min_len:
+        padding_len = min_len - seq_len
+        padding = np.repeat(pose_seq[-1,:].reshape((72,1)), padding_len, axis=1).swapaxes(0,1)
+        return np.vstack((pose_seq, padding))
+    
+    return pose_seq
+
+
 def main(args):
     # List down all the pickles
     all_file_list = glob(osp.join(args.ntu_vibe_dir, f'*/*.pkl'))
@@ -33,7 +43,6 @@ def main(args):
     training_data = dict()
     testing_data = dict()
     empty_file_list = list()
-    target_fields = ['pose', 'betas']
 
     pbar = tqdm(all_file_list)
     sample_counter = dict(train=0, test=0, empty=0)
@@ -41,7 +50,7 @@ def main(args):
     for file_idx, file_path in enumerate(pbar):
         filename, _ = osp.splitext(osp.basename(file_path))
         subject_id = get_subject_id(filename)
-        pbar.set_description(f'Processing {filename}  trn:{sample_counter["train"]}  tst:{sample_counter["test"]}  emp:{sample_counter["empty"]}')
+        pbar.set_description(f'Processing {filename}  train:{sample_counter["train"]}  test:{sample_counter["test"]}  empty:{sample_counter["empty"]}')
 
         pkl_data = joblib.load(file_path)
         if len(pkl_data.keys()) < 1:
@@ -51,8 +60,8 @@ def main(args):
         data = pkl_data[list(pkl_data.keys())[0]]
 
         extracted_data = dict()
-        for field in target_fields:
-            extracted_data[field] = data[field]
+        extracted_data['pose'] = pad_pose_seq(args.min_seq_len, data['pose'])
+        extracted_data['betas'] = data['betas']
         extracted_data['label'] = get_class_id(filename)
         extracted_data['label_onehot'] = build_one_hot(NTU_NUM_CLASSES, extracted_data['label'])
 
@@ -88,6 +97,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--ntu_vibe_dir', type=str, 
                         help='Path to the directory with the VIBE extraction of NTU videos')
+    parser.add_argument('--min_seq_len', type=int, default=90,
+                        help='Minimum number of frames requires in pose sequence, if lower the sequence will be padded')
     parser.add_argument('--output_dir', type=str,
                         help='Path to output directory where the train/test pkl files will be stored')
                         
