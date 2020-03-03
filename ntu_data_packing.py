@@ -30,7 +30,7 @@ def main(args):
     testing_data = dict()
     target_fields = ['pose', 'betas']
 
-    pbar = all_file_list
+    pbar = tqdm(all_file_list)
 
     for file_path in pbar:
         pbar.set_description(f'Processing {file_path}')
