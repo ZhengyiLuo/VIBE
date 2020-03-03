@@ -50,9 +50,7 @@ def main(args):
         if subject_id in TRAINING_SUBJECT_IDS:
             training_data[filename] = extracted_data
         else:
-            testing_data[filename] = extracted_data
-
-        break    
+            testing_data[filename] = extracted_data 
     pbar.close()
 
     pkl.dump(training_data, open(osp.join(args.output_dir, 'train_vibe_ntu.pkl'), 'wb'))
