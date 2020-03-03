@@ -65,17 +65,17 @@ def main(args):
         sample_counter['test'] = len(testing_data.keys())
         sample_counter['empty'] = len(empty_file_list)
 
-        if file_idx % 1000 == 0:
+        if file_idx > 0 and file_idx % 1000 == 0:
             pkl.dump(training_data, open(osp.join(args.output_dir, TRAIN_OUTPUT_FILENAME), 'wb'))
             pkl.dump(testing_data, open(osp.join(args.output_dir, TEST_OUTPUT_FILENAME), 'wb'))
-            with open(osp.join(args.output_dir, EMPTY_OUTPUT_FILENAME)) as empty_file:
+            with open(osp.join(args.output_dir, EMPTY_OUTPUT_FILENAME), 'w') as empty_file:
                 empty_file.write('\n'.join(empty_file_list))
 
     pbar.close()
 
     pkl.dump(training_data, open(osp.join(args.output_dir, TRAIN_OUTPUT_FILENAME), 'wb'))
     pkl.dump(testing_data, open(osp.join(args.output_dir, TEST_OUTPUT_FILENAME), 'wb'))
-    with open(osp.join(args.output_dir, EMPTY_OUTPUT_FILENAME)) as empty_file:
+    with open(osp.join(args.output_dir, EMPTY_OUTPUT_FILENAME), 'w') as empty_file:
         empty_file.write('\n'.join(empty_file_list))
 
     print(f'Training samples:  {len(training_data.keys())}')
