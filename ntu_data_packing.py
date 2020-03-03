@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--ntu_vibe_dir', type=str, 
                         help='Path to the directory with the VIBE extraction of NTU videos')
-    parser.add_argument('--output_dir', type=str
+    parser.add_argument('--output_dir', type=str,
                         help='Path to output directory where the train/test pkl files will be stored')
                         
     args = parser.parse_args()
