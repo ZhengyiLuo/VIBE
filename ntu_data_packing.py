@@ -58,6 +58,9 @@ def main(args):
     pkl.dump(training_data, open(osp.join(args.output_dir, 'train_vibe_ntu.pkl'), 'wb'))
     pkl.dump(testing_data, open(osp.join(args.output_dir, 'test_vibe_ntu.pkl'), 'wb'))
 
+    print(f'Training samples:  {len(training_data.keys())}')
+    print(f'Testing samples:   {len(testing_data.keys())}')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
