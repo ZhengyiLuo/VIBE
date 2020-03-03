@@ -29,6 +29,7 @@ def main(args):
 
     training_data = dict()
     testing_data = dict()
+    empty_file_list = list()
     target_fields = ['pose', 'betas']
 
     pbar = tqdm(all_file_list)
@@ -39,6 +40,10 @@ def main(args):
         pbar.set_description(f'Processing {filename}')
 
         pkl_data = joblib.load(file_path)
+        if len(pkl_data.keys()) < 1:
+            empty_file_list.append(file_path)
+            continue
+
         data = pkl_data[list(pkl_data.keys())[0]]
 
         extracted_data = dict()
@@ -55,9 +60,12 @@ def main(args):
 
     pkl.dump(training_data, open(osp.join(args.output_dir, 'train_vibe_ntu.pkl'), 'wb'))
     pkl.dump(testing_data, open(osp.join(args.output_dir, 'test_vibe_ntu.pkl'), 'wb'))
+    with open(osp.join(args.output_dir, 'empty_vibe_ntu.lst')) as empty_file:
+        empty_file.write('\n'.join(empty_file_list))
 
     print(f'Training samples:  {len(training_data.keys())}')
     print(f'Testing samples:   {len(testing_data.keys())}')
+    print(f'Empty files:       {len(empty_file_list)}')
 
 
 if __name__ == '__main__':
