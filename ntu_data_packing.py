@@ -38,7 +38,7 @@ def main(args):
         pbar.set_description(f'Processing {filename}')
 
         pkl_data = joblib.load(file_path)
-        data = pkl_data(list(pkl_data.keys())[0])
+        data = pkl_data[list(pkl_data.keys())[0]]
 
         extracted_data_dict = dict()
         for field in target_fields:
