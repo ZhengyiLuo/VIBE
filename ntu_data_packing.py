@@ -6,18 +6,23 @@ import pickle as pkl
 from tqdm import tqdm
 from glob import glob
 
+MUTUAL_ACTIONS_IDS = [49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]
 TRAINING_SUBJECT_IDS = [1, 2, 4, 5, 8, 9, 13, 14, 15, 16, 17, 18, 19, 25, 27, 28, 31, 34, 35, 38]
 NTU_NUM_CLASSES = 60
 TRAIN_OUTPUT_FILENAME = 'train_vibe_ntu.pkl'
 TEST_OUTPUT_FILENAME = 'test_vibe_ntu.pkl'
 EMPTY_OUTPUT_FILENAME = 'empty_vibe_ntu.lst'
+ERROR_OUTPUT_FILENAME = 'error_vibe_ntu.lst'
+
 
 def get_subject_id(filename):
-    return int(filename[9:12])
+    p_idx = filename.find('P') + 1
+    return int(filename[p_idx:p_idx+3])
 
 
 def get_class_id(filename):
-    return int(filename[17:20]) - 1
+    a_idx = filename.find('A') + 1
+    return int(filename[a_idx:a_idx+3]) - 1
 
 
 def build_one_hot(num_classes, class_idx):
@@ -43,13 +48,21 @@ def main(args):
     training_data = dict()
     testing_data = dict()
     empty_file_list = list()
+    error_file_list = list()
 
     pbar = tqdm(all_file_list)
     sample_counter = dict(train=0, test=0, empty=0)
 
     for file_idx, file_path in enumerate(pbar):
         filename, _ = osp.splitext(osp.basename(file_path))
-        subject_id = get_subject_id(filename)
+        try:
+            subject_id = get_subject_id(filename)
+            class_id = get_class_id(filename)
+        except ValueError:
+            print(f'Could not extract info from: {filename}')
+            error_file_list.append(file_path)
+            continue
+
         pbar.set_description(f'Processing {filename}  train:{sample_counter["train"]}  test:{sample_counter["test"]}  empty:{sample_counter["empty"]}')
 
         pkl_data = joblib.load(file_path)
@@ -62,7 +75,7 @@ def main(args):
         extracted_data = dict()
         extracted_data['pose'] = pad_pose_seq(args.min_seq_len, data['pose'])
         extracted_data['betas'] = data['betas']
-        extracted_data['label'] = get_class_id(filename)
+        extracted_data['label'] = class_id
         extracted_data['label_onehot'] = build_one_hot(NTU_NUM_CLASSES, extracted_data['label'])
 
         if subject_id in TRAINING_SUBJECT_IDS:
@@ -79,6 +92,8 @@ def main(args):
             pkl.dump(testing_data, open(osp.join(args.output_dir, TEST_OUTPUT_FILENAME), 'wb'))
             with open(osp.join(args.output_dir, EMPTY_OUTPUT_FILENAME), 'w') as empty_file:
                 empty_file.write('\n'.join(empty_file_list))
+            with open(osp.join(args.output_dir, ERROR_OUTPUT_FILENAME), 'w') as error_file:
+                error_file.write('\n'.join(error_file_list))
 
     pbar.close()
 
@@ -86,10 +101,13 @@ def main(args):
     pkl.dump(testing_data, open(osp.join(args.output_dir, TEST_OUTPUT_FILENAME), 'wb'))
     with open(osp.join(args.output_dir, EMPTY_OUTPUT_FILENAME), 'w') as empty_file:
         empty_file.write('\n'.join(empty_file_list))
+    with open(osp.join(args.output_dir, ERROR_OUTPUT_FILENAME), 'w') as error_file:
+        error_file.write('\n'.join(error_file_list))
 
     print(f'Training samples:  {len(training_data.keys())}')
     print(f'Testing samples:   {len(testing_data.keys())}')
     print(f'Empty files:       {len(empty_file_list)}')
+    print(f'Error files:       {len(error_file_list)}')
 
 
 if __name__ == '__main__':
