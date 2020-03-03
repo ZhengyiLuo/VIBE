@@ -8,6 +8,9 @@ from glob import glob
 
 TRAINING_SUBJECT_IDS = [1, 2, 4, 5, 8, 9, 13, 14, 15, 16, 17, 18, 19, 25, 27, 28, 31, 34, 35, 38]
 NTU_NUM_CLASSES = 60
+TRAIN_OUTPUT_FILENAME = 'train_vibe_ntu.pkl'
+TEST_OUTPUT_FILENAME = 'test_vibe_ntu.pkl'
+EMPTY_OUTPUT_FILENAME = 'empty_vibe_ntu.lst'
 
 def get_subject_id(filename):
     return int(filename[9:12])
@@ -33,11 +36,12 @@ def main(args):
     target_fields = ['pose', 'betas']
 
     pbar = tqdm(all_file_list)
+    sample_counter = dict(train=0, test=0, empty=0)
 
-    for file_path in pbar:
+    for file_idx, file_path in enumerate(pbar):
         filename, _ = osp.splitext(osp.basename(file_path))
         subject_id = get_subject_id(filename)
-        pbar.set_description(f'Processing {filename}')
+        pbar.set_description(f'Processing {filename}  trn:{sample_counter["train"]}  tst:{sample_counter["test"]}  emp:{sample_counter["empty"]}')
 
         pkl_data = joblib.load(file_path)
         if len(pkl_data.keys()) < 1:
@@ -56,11 +60,22 @@ def main(args):
             training_data[filename] = extracted_data
         else:
             testing_data[filename] = extracted_data 
+
+        sample_counter['train'] = len(training_data.keys())
+        sample_counter['test'] = len(testing_data.keys())
+        sample_counter['empty'] = len(empty_file_list)
+
+        if file_idx % 1000 == 0:
+            pkl.dump(training_data, open(osp.join(args.output_dir, TRAIN_OUTPUT_FILENAME), 'wb'))
+            pkl.dump(testing_data, open(osp.join(args.output_dir, TEST_OUTPUT_FILENAME), 'wb'))
+            with open(osp.join(args.output_dir, EMPTY_OUTPUT_FILENAME)) as empty_file:
+                empty_file.write('\n'.join(empty_file_list))
+
     pbar.close()
 
-    pkl.dump(training_data, open(osp.join(args.output_dir, 'train_vibe_ntu.pkl'), 'wb'))
-    pkl.dump(testing_data, open(osp.join(args.output_dir, 'test_vibe_ntu.pkl'), 'wb'))
-    with open(osp.join(args.output_dir, 'empty_vibe_ntu.lst')) as empty_file:
+    pkl.dump(training_data, open(osp.join(args.output_dir, TRAIN_OUTPUT_FILENAME), 'wb'))
+    pkl.dump(testing_data, open(osp.join(args.output_dir, TEST_OUTPUT_FILENAME), 'wb'))
+    with open(osp.join(args.output_dir, EMPTY_OUTPUT_FILENAME)) as empty_file:
         empty_file.write('\n'.join(empty_file_list))
 
     print(f'Training samples:  {len(training_data.keys())}')
