@@ -4,7 +4,7 @@ import numpy as np
 import pickle as pkl
 from glob import glob
 
-def main():
+def main(args):
     all_file_list = glob(osp.join(args.ntu_vibe_dir, f'*/*.pkl'))
     print(all_file_list)
 
