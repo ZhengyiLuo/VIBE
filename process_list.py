@@ -13,6 +13,8 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
+#
+# Modified by: Salvador Medina, salvadom@cs.cmu.edu
 
 import os
 import os.path as osp
