@@ -62,14 +62,12 @@ def main(args):
 
     for file_idx, file_path in enumerate(pbar):
         filename, _ = osp.splitext(osp.basename(file_path))
-        try:
-            subject_id = get_subject_id(filename)
-            class_id = get_class_id(filename)
-        except ValueError:
-            print(f'Could not extract info from: {filename}')
-            error_file_list.append(file_path)
-            continue
+        subject_id = get_subject_id(filename)
+        class_id = get_class_id(filename)
 
+        if class_id in MUTUAL_ACTIONS_IDS and args.exclude_mutual_actions:
+            continue
+        
         pbar.set_description(f'Processing {filename}  train:{sample_counter["train"]}  test:{sample_counter["test"]}  empty:{sample_counter["empty"]}')
 
         pkl_data = joblib.load(file_path)
@@ -128,6 +126,8 @@ if __name__ == '__main__':
                         help='Minimum number of frames requires in pose sequence, if lower the sequence will be padded')
     parser.add_argument('--output_dir', type=str,
                         help='Path to output directory where the train/test pkl files will be stored')
+    parser.add_argument('--exclude_mutual_actions', type=bool, default=True,
+                        help='Excludes the classes that have two persons in the video')
                         
     args = parser.parse_args()
 
