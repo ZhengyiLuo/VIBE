@@ -37,8 +37,15 @@ def pad_pose_seq(min_len, pose_seq):
         padding_len = min_len - seq_len
         padding = np.repeat(pose_seq[-1,:].reshape((72,1)), padding_len, axis=1).swapaxes(0,1)
         return np.vstack((pose_seq, padding))
-    
     return pose_seq
+
+def pad_trans_seq(min_len, trans_seq):
+    seq_len, trans_len = trans_seq.shape
+    if seq_len < min_len:
+        padding_len = min_len - seq_len
+        padding = np.repeat(trans_seq[-1,:].reshape((trans_len,1)), padding_len, axis=1).swapaxes(0,1)
+        return np.vstack((trans_seq, padding))
+    return trans_seq
 
 
 def main(args):
@@ -75,6 +82,8 @@ def main(args):
         extracted_data = dict()
         extracted_data['pose'] = pad_pose_seq(args.min_seq_len, data['pose'])
         extracted_data['betas'] = data['betas']
+        extracted_data['pred_cam'] = pad_trans_seq(args.min_seq_len, data['pred_cam'])
+        extracted_data['orig_cam'] = pad_trans_seq(args.min_seq_len, data['orig_cam'])
         extracted_data['label'] = class_id
         extracted_data['label_onehot'] = build_one_hot(NTU_NUM_CLASSES, extracted_data['label'])
 

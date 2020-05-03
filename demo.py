@@ -340,6 +340,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--vid_file', type=str,
                         help='input video path or youtube link')
+    
+    
+
 
     parser.add_argument('--output_folder', type=str,
                         help='output folder to write results')
