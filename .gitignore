@@ -1,4 +1,5 @@
 
+
 #n't track content of these folders
 trained_models/
 someOtherfoler/
@@ -27,3 +28,12 @@ output/
 *.rar
 *.tar
 *.zip
+
+.idea/
+data
+__pycache__/
+vibe-env/
+output/
+*.mp4
+results
+
