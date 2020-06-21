@@ -25,7 +25,7 @@ class ThreeDPW(Dataset3D):
         # but we can use it as an ensemble
         is_train = set == 'train'
         overlap = overlap if is_train else 0.
-        print('3DPW Dataset overlap ratio: ', overlap)
+        # print('3DPW Dataset overlap ratio: ', overlap)
         super(ThreeDPW, self).__init__(
             set=set,
             folder=THREEDPW_DIR,
@@ -34,4 +34,4 @@ class ThreeDPW(Dataset3D):
             dataset_name=db_name,
             debug=debug,
         )
-        print(f'{db_name} - number of dataset objects {self.__len__()}')
+        # print(f'{db_name} - number of dataset objects {self.__len__()}')

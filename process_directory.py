@@ -328,6 +328,8 @@ def main(args):
                 images_to_video(img_folder=output_img_folder, output_vid_file=save_name)
                 
                 shutil.rmtree(output_img_folder)
+        except KeyboardInterrupt:
+            exit(0)
         except :
             print(video_file, "Failed!!!")
 

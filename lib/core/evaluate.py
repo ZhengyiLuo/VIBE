@@ -24,6 +24,7 @@ from progress.bar import Bar
 
 from lib.core.config import VIBE_DATA_DIR
 from lib.utils.utils import move_dict_to_device, AverageMeter
+import pickle as pk
 
 from lib.utils.eval_utils import (
     compute_accel,
@@ -32,6 +33,7 @@ from lib.utils.eval_utils import (
     batch_compute_similarity_transform_torch,
 )
 
+# import zen_renderer.renderer.smpl_renderer as smpl_renderer
 logger = logging.getLogger(__name__)
 
 class Evaluator():
@@ -40,13 +42,14 @@ class Evaluator():
             test_loader,
             model,
             device=None,
+            refiner = None,
     ):
         self.test_loader = test_loader
         self.model = model
         self.device = device
 
         self.evaluation_accumulators = dict.fromkeys(['pred_j3d', 'target_j3d', 'target_theta', 'pred_verts'])
-
+        self.refiner = refiner
         if self.device is None:
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -73,8 +76,9 @@ class Evaluator():
             # <=============
             with torch.no_grad():
                 inp = target['features']
-
-                preds = self.model(inp, J_regressor=J_regressor)
+                
+                # preds = self.model(inp, J_regressor=J_regressor, refiner = self.refiner)
+                preds = self.model(inp, J_regressor=J_regressor, refiner = None)
 
                 # convert to 14 keypoint format for evaluation
                 # if self.use_spin:
@@ -84,12 +88,24 @@ class Evaluator():
                 pred_verts = preds[-1]['verts'].view(-1, 6890, 3).cpu().numpy()
                 target_theta = target['theta'].view(-1, 85).cpu().numpy()
 
+                ######################## vis #####################
+                # renderer = smpl_renderer.SMPL_Renderer(image_size = 400, camera_mode="look_at")
+                # target_pose = target_theta[:,3:75]
+                # pred_pose = preds[-1]['theta'][:,:,3:75].squeeze()
+                # renderer.render_pose_vid(torch.tensor(target_pose), out_file_name = "output/gt{:02d}.mp4".format(i), random_camera = 2, random_shape=False)
+                # renderer.render_pose_vid(torch.tensor(pred_pose), out_file_name = "output/ref{:02d}.mp4".format(i), random_camera = 2, random_shape=False)
+
+                ######################## vis #####################
+
 
                 self.evaluation_accumulators['pred_verts'].append(pred_verts)
                 self.evaluation_accumulators['target_theta'].append(target_theta)
 
                 self.evaluation_accumulators['pred_j3d'].append(pred_j3d)
                 self.evaluation_accumulators['target_j3d'].append(target_j3d)
+
+                del target, preds
+                torch.cuda.empty_cache()
             # =============>
 
             batch_time = time.time() - start
@@ -103,6 +119,7 @@ class Evaluator():
         bar.finish()
 
         logger.info(summary_string)
+
 
     def evaluate(self):
 
@@ -130,6 +147,9 @@ class Evaluator():
         pred_verts = self.evaluation_accumulators['pred_verts']
         target_theta = self.evaluation_accumulators['target_theta']
 
+        # pk.dump(target_theta, open("3dpw_thetas.pkl", "wb"))
+        # np.savez("amass_eval_test.npz", pred_j3ds = pred_j3ds.numpy(), target_j3ds = target_j3ds.numpy())
+        
         m2mm = 1000
 
         pve = np.mean(compute_error_verts(target_theta=target_theta, pred_verts=pred_verts)) * m2mm

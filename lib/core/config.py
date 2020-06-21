@@ -19,13 +19,14 @@ from yacs.config import CfgNode as CN
 
 # CONSTANTS
 # You may modify them at will
-VIBE_DB_DIR = 'data/vibe_db'
-AMASS_DIR = 'data/amass'
-INSTA_DIR = 'data/insta_variety'
-MPII3D_DIR = 'data/mpi_inf_3dhp'
-THREEDPW_DIR = 'data/3dpw'
-PENNACTION_DIR = 'data/penn_action'
-POSETRACK_DIR = 'data/posetrack'
+VIBE_DB_DIR = '/hdd/zen/data/video_pose/vibe_db'
+AMASS_DIR = '/hdd/zen/data/video_pose/amass'
+INSTA_DIR = '/hdd/zen/data/video_pose/insta_variety'
+MPII3D_DIR = '/hdd/zen/data/video_pose/mpi_inf_3dhp'
+THREEDPW_DIR = '/hdd/zen/data/video_pose/3dpw'
+AMASS_REND_DIR = '/hdd/zen/data/ActBound/AMASS/Rendering/take3/'
+PENNACTION_DIR = '/hdd/zen/data/video_pose/pennaction'
+POSETRACK_DIR = '/hdd/zen/data/video_pose/posetrack'
 VIBE_DATA_DIR = 'data/vibe_data'
 
 # Configuration variables

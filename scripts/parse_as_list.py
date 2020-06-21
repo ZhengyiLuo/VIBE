@@ -34,8 +34,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print("Running As list")
-    gpu_idxs = [0, 1, 2, 3]
-    num_jobs = 8
+    gpu_idxs = [0, 1, 2]
+    num_jobs = 6
 
     video_base = args.video_dir
     output_dir = args.output_dir

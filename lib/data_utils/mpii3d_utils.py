@@ -328,11 +328,10 @@ if __name__ == '__main__':
     parser.add_argument('--dir', type=str, help='dataset directory', default='data/mpii_3d')
     args = parser.parse_args()
 
-    dataset = read_test_data(args.dir)
-    joblib.dump(dataset, osp.join(VIBE_DB_DIR, 'mpii3d_val_db.pt'))
+    # dataset = read_test_data(args.dir)
+    # joblib.dump(dataset, osp.join(VIBE_DB_DIR, 'mpii3d_val_db.pt'))
 
     dataset = read_data_train(args.dir)
-    joblib.dump(dataset, osp.join(VIBE_DB_DIR, 'mpii3d_spin_db.pt'))
-
+    joblib.dump(dataset, osp.join(VIBE_DB_DIR, 'mpii3d_train_db.pt'))
 
 

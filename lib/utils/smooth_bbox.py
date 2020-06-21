@@ -51,6 +51,7 @@ def kp_to_bbox_param(kp, vis_thresh):
         return
     min_pt = np.min(kp[vis, :2], axis=0)
     max_pt = np.max(kp[vis, :2], axis=0)
+    
     person_height = np.linalg.norm(max_pt - min_pt)
     if person_height < 0.5:
         return

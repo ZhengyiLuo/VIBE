@@ -36,13 +36,30 @@ class Dataset3D(Dataset):
         self.set = set
         self.dataset_name = dataset_name
         self.seqlen = seqlen
-        self.stride = int(seqlen * (1-overlap))
         self.debug = debug
         self.db = self.load_db()
-        self.vid_indices = split_into_chunks(self.db['vid_name'], self.seqlen, self.stride)
+
+
+        self.vid_names = vid_names = self.db['vid_name']
+        self.unique_names = unique_names = np.unique(self.db['vid_name'])
+        self.vid_start = vid_start = {}
+        self.vid_lengths = vid_lengths = {}
+        for u_name in unique_names:
+            finds = np.where(vid_names== u_name)[0]
+            vid_start[u_name] = finds[0]
+            vid_lengths[u_name] = len(finds)
+        
+        self.data_keys = data_keys = []
+        for k, v in vid_lengths.items():
+            if vid_lengths[k] > seqlen:
+                [self.data_keys.append(k) for i in range(vid_lengths[k]//seqlen)]
+        print("********************** Loading 3D dataset **********************")
+        print("Number of videos: ", len(self.unique_names))    
+        print("Number of sampled sequences: ", len(self.data_keys))
+        print("********************** Loading 3D dataset **********************")
 
     def __len__(self):
-        return len(self.vid_indices)
+        return len(self.data_keys)
 
     def __getitem__(self, index):
         return self.get_single_item(index)
@@ -59,11 +76,16 @@ class Dataset3D(Dataset):
         return db
 
     def get_single_item(self, index):
-        start_index, end_index = self.vid_indices[index]
+        curr_key = self.data_keys[index]
+        curr_length = self.vid_lengths[curr_key]
+        vid_start = self.vid_start[curr_key]
+
+        start_index = (torch.randint(curr_length - self.seqlen, (1, )) + vid_start if curr_length - self.seqlen != 0 else vid_start).long()
+        end_index = (start_index + self.seqlen - 1).long()
 
         is_train = self.set == 'train'
 
-        if self.dataset_name == '3dpw':
+        if self.dataset_name == '3dpw' or self.dataset_name == 'amass_rend_take3':
             kp_2d = convert_kps(self.db['joints2D'][start_index:end_index + 1], src='common', dst='spin')
             kp_3d = self.db['joints3D'][start_index:end_index + 1]
         elif self.dataset_name == 'mpii3d':
@@ -84,7 +106,7 @@ class Dataset3D(Dataset):
         kp_3d_tensor = np.zeros((self.seqlen, nj, 3), dtype=np.float16)
 
 
-        if self.dataset_name == '3dpw':
+        if self.dataset_name == '3dpw' or self.dataset_name == 'amass_rend_take3':
             pose  = self.db['pose'][start_index:end_index+1]
             shape = self.db['shape'][start_index:end_index+1]
             w_smpl = torch.ones(self.seqlen).float()
@@ -133,6 +155,7 @@ class Dataset3D(Dataset):
             theta_tensor[idx] = theta
             kp_3d_tensor[idx] = kp_3d[idx]
 
+
         target = {
             'features': input,
             'theta': torch.from_numpy(theta_tensor).float(), # camera, pose and shape
@@ -145,7 +168,7 @@ class Dataset3D(Dataset):
         if self.dataset_name == 'mpii3d' and not is_train:
             target['valid'] = self.db['valid_i'][start_index:end_index+1]
 
-        if self.dataset_name == '3dpw' and not is_train:
+        if (self.dataset_name == '3dpw' or self.dataset_name == 'amass_rend_take3') and not is_train:
             vn = self.db['vid_name'][start_index:end_index + 1]
             fi = self.db['frame_id'][start_index:end_index + 1]
             target['instance_id'] = [f'{v}/{f}'for v,f in zip(vn,fi)]

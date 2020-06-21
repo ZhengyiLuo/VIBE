@@ -13,6 +13,13 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
+import glob
+import os
+import sys
+import pdb
+import os.path as osp
+sys.path.append(os.getcwd())
+
 
 import os
 import joblib
@@ -49,6 +56,8 @@ all_sequences = [
     'TCD_handMocap',
     'TotalCapture',
     'Transitions_mocap',
+    'DFaust_67', 
+    'BMLmovi'
 ]
 
 def read_data(folder, sequences):
@@ -61,16 +70,21 @@ def read_data(folder, sequences):
         'theta': [],
         'vid_name': [],
     }
+    print(folder)
+    try:
+        for seq_name in sequences:
+            print(f'Reading {seq_name} sequence...')
+            seq_folder = osp.join(folder, seq_name)
 
-    for seq_name in sequences:
-        print(f'Reading {seq_name} sequence...')
-        seq_folder = osp.join(folder, seq_name)
-
-        thetas, vid_names = read_single_sequence(seq_folder, seq_name)
-        seq_name_list = np.array([seq_name]*thetas.shape[0])
-        print(seq_name, 'number of videos', thetas.shape[0])
-        db['theta'].append(thetas)
-        db['vid_name'].append(vid_names)
+            thetas, vid_names = read_single_sequence(seq_folder, seq_name)
+            seq_name_list = np.array([seq_name]*thetas.shape[0])
+            print(seq_name, 'number of videos', thetas.shape[0])
+            db['theta'].append(thetas)
+            db['vid_name'].append(vid_names)
+    except:
+        import pdb
+        pdb.set_trace()
+    
 
     db['theta'] = np.concatenate(db['theta'], axis=0)
     db['vid_name'] = np.concatenate(db['vid_name'], axis=0)
@@ -89,7 +103,13 @@ def read_single_sequence(folder, seq_name):
         actions = [x for x in os.listdir(osp.join(folder, subject)) if x.endswith('.npz')]
 
         for action in actions:
-            data = np.load(osp.join(folder, subject, action))
+            fname = osp.join(folder, subject, action)
+            
+            if fname.endswith('shape.npz'):
+                continue
+                
+            data = np.load(fname)
+                
             pose = data['poses'][:, joints_to_use]
 
             if pose.shape[0] < 60:
@@ -134,9 +154,11 @@ def read_seq_data(folder, nsubjects, fps):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir', type=str, help='dataset directory', default='data/amass')
+    parser.add_argument('--out_dir', type=str, help='dataset directory', default=VIBE_DB_DIR)
+
     args = parser.parse_args()
 
     db = read_data(args.dir, sequences=all_sequences)
-    db_file = osp.join(VIBE_DB_DIR, 'amass_db.pt')
+    db_file = osp.join(args.out_dir, 'amass_db.pt')
     print(f'Saving AMASS dataset to {db_file}')
     joblib.dump(db, db_file)

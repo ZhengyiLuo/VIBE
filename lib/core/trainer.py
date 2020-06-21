@@ -192,7 +192,6 @@ class Trainer():
                 motion_discriminator=self.motion_discriminator,
             )
             # =======>
-
             timer['loss'] = time.time() - start
             start = time.time()
 
@@ -338,8 +337,8 @@ class Trainer():
 
             self.save_model(performance, epoch)
 
-            if performance > 80.0:
-                exit(f'MPJPE error is {performance}, higher than 80.0. Exiting!...')
+            # if performance > 200.0:
+                # exit(f'MPJPE error is {performance}, higher than 80.0. Exiting!...')
 
         self.writer.close()
 
