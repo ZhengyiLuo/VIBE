@@ -1,4 +1,9 @@
+import glob
 import os
+import sys
+import pdb
+import os.path as osp
+sys.path.append(os.getcwd())
 import torch
 
 from lib.dataset import *
@@ -36,6 +41,7 @@ def main(cfg):
         print(f'{cfg.TRAIN.PRETRAINED} is not a pretrained model!!!!')
         exit()
 
+    # test_db = eval(eval_name)(set='val', seqlen=cfg.DATASET.SEQLEN, debug=cfg.DEBUG)
     test_db = eval(eval_name)(set='test', seqlen=cfg.DATASET.SEQLEN, debug=cfg.DEBUG)
     
     test_loader = DataLoader(
@@ -52,7 +58,6 @@ def main(cfg):
         model=model,
         device=cfg.DEVICE,
         test_loader=test_loader,
-        refiner = None
     ).run()
 
 

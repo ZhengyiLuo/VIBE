@@ -37,14 +37,34 @@ class Dataset2D(Dataset):
         self.folder = folder
         self.dataset_name = dataset_name
         self.seqlen = seqlen
-        self.stride = int(seqlen * (1-overlap))
+        # self.stride = int(seqlen * (1-overlap))
         self.debug = debug
         self.db = self.load_db()
-        self.vid_indices = split_into_chunks(self.db['vid_name'], self.seqlen, self.stride)
 
+        self.vid_names = vid_names = self.db['vid_name']
+        self.unique_names = unique_names = np.unique(self.db['vid_name'])
+        self.vid_start = vid_start = {}
+        self.vid_lengths = vid_lengths = {}
+        for u_name in unique_names:
+            finds = np.where(vid_names== u_name)[0]
+            vid_start[u_name] = finds[0]
+            vid_lengths[u_name] = len(finds)
+        
+        self.data_keys = data_keys = []
+        for k, v in vid_lengths.items():
+            if vid_lengths[k] > seqlen:
+                [self.data_keys.append(k) for i in range(vid_lengths[k]//seqlen)]
 
+        print("********************** Loading 2D dataset **********************")
+        print("Number of videos: ", len(self.unique_names))    
+        print("Number of sampled sequences: ", len(self.data_keys))
+        print("********************** Loading 2D dataset **********************")
+        
+
+        # self.vid_indices = split_into_chunks(self.db['vid_name'], self.seqlen, self.stride)
+        
     def __len__(self):
-        return len(self.vid_indices)
+        return len(self.data_keys)
 
     def __getitem__(self, index):
         return self.get_single_item(index)
@@ -63,17 +83,23 @@ class Dataset2D(Dataset):
         return db
 
     def get_single_item(self, index):
-        start_index, end_index = self.vid_indices[index]
 
+        curr_key = self.data_keys[index]
+        curr_length = self.vid_lengths[curr_key]
+        vid_start = self.vid_start[curr_key]
+
+        start_index = (torch.randint(curr_length - self.seqlen, (1, )) + vid_start if curr_length - self.seqlen != 0 else vid_start).long()
+        end_index = (start_index + self.seqlen - 1).long()
+        
         kp_2d = self.db['joints2D'][start_index:end_index+1]
         if self.dataset_name != 'posetrack':
             kp_2d = convert_kps(kp_2d, src=self.dataset_name, dst='spin')
         kp_2d_tensor = np.ones((self.seqlen, 49, 3), dtype=np.float16)
 
         bbox  = self.db['bbox'][start_index:end_index+1]
-
         input = torch.from_numpy(self.db['features'][start_index:end_index+1]).float()
 
+        
 
         for idx in range(self.seqlen):
             # crop image and transform 2d keypoints
@@ -90,6 +116,8 @@ class Dataset2D(Dataset):
 
             kp_2d[idx,:,:2] = normalize_2d_kp(kp_2d[idx,:,:2], 224)
             kp_2d_tensor[idx] = kp_2d[idx]
+            
+
 
         vid_name = self.db['vid_name'][start_index:end_index+1]
         frame_id = self.db['img_name'][start_index:end_index+1].astype(str)

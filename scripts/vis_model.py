@@ -14,7 +14,12 @@
 #
 # Contact: ps-license@tuebingen.mpg.de
 
+import glob
 import os
+import sys
+import pdb
+import os.path as osp
+sys.path.append(os.getcwd())
 os.environ['PYOPENGL_PLATFORM'] = 'egl'
 
 import cv2
@@ -29,7 +34,10 @@ from tqdm import tqdm
 from multi_person_tracker import MPT
 from torch.utils.data import DataLoader
 
-from lib.models.vibe import VIBE_Demo
+from lib.models.vibe import VIBE_Demo, VIBE
+from lib.models.refiner import REFINER_demo, REFINER
+from lib.models.meva import MEVA_demo, MEVA
+from lib.models.mevaV2 import MEVAV2_demo, MEVAV2
 from lib.utils.renderer import Renderer
 from lib.dataset.inference import Inference
 from lib.data_utils.kp_utils import convert_kps
@@ -99,24 +107,68 @@ def main(args):
     for person_id in list(tracking_results.keys()):
         if tracking_results[person_id]['frames'].shape[0] < MIN_NUM_FRAMES:
             del tracking_results[person_id]
+    # ========= VIBE Model ========= #
+    # model = VIBE_Demo(
+    #     seqlen=16,
+    #     n_layers=2,
+    #     hidden_size=1024,
+    #     add_linear=True,
+    #     use_residual=True,
+    # ).to(device)
 
-    # ========= Define VIBE model ========= #
-    model = VIBE_Demo(
-        seqlen=16,
-        n_layers=2,
-        hidden_size=1024,
-        add_linear=True,
-        use_residual=True,
+    # pretrained_file = download_ckpt(use_3dpw=False)
+    # ckpt = torch.load(pretrained_file)
+    # print(f'Performance of pretrained model on 3DPW: {ckpt["performance"]}')
+    # ckpt = ckpt['gen_state_dict']
+    # model.load_state_dict(ckpt, strict=False)
+    # model.eval()
+    # print(f'Loaded pretrained weights from \"{pretrained_file}\"')
+
+
+    # ========= VIBE Model ========= #
+
+
+    # ========= Refiner Model ========= #
+    # vibe = VIBE(
+    #         n_layers=2,
+    #         batch_size=32,
+    #         seqlen=90,
+    #         hidden_size=1024,
+    #         add_linear=True,
+    #         bidirectional=False,
+    #         use_residual=True,
+    #     ).to(device)
+
+    # checkpoint = torch.load('data/vibe_data/vibe_model_wo_3dpw.pth.tar')
+    # best_performance = checkpoint['performance']
+    # vibe.load_state_dict(checkpoint['gen_state_dict'])
+
+    # model = REFINER_demo(vibe = vibe).to(device)
+
+    # pretrained_file = "results/refiner/21-06-2020_15-05-07_refiner/model_best.pth.tar"
+    # ckpt = torch.load(pretrained_file)
+    # print(f'Performance of pretrained model on 3DPW: {ckpt["performance"]}')
+    # ckpt = ckpt['gen_state_dict']
+    # model.load_state_dict(ckpt)
+    # model.eval()
+    # print(f'Loaded pretrained weights from \"{pretrained_file}\"')
+    # ========= Refiner Model ========= #
+
+
+    # ========= MEVA Model ========= #
+    model = MEVAV2_demo(
+        90, hidden_size=1024, add_linear=True, use_residual=True, bidirectional=True, n_layers=2, batch_size=32
     ).to(device)
-
-    # ========= Load pretrained weights ========= #
-    pretrained_file = download_ckpt(use_3dpw=False)
+    pretrained_file = "results/meva/01-07-2020_00-55-24_meva/model_best.pth.tar"
     ckpt = torch.load(pretrained_file)
     print(f'Performance of pretrained model on 3DPW: {ckpt["performance"]}')
     ckpt = ckpt['gen_state_dict']
-    model.load_state_dict(ckpt, strict=False)
+    model.load_state_dict(ckpt)
     model.eval()
     print(f'Loaded pretrained weights from \"{pretrained_file}\"')
+    # ========= MEVA Model ========= #
+
+    
 
     # ========= Run VIBE on each person ========= #
     print(f'Running VIBE on each tracklet...')
@@ -144,7 +196,7 @@ def main(args):
         frames = dataset.frames
         has_keypoints = True if joints2d is not None else False
 
-        dataloader = DataLoader(dataset, batch_size=args.vibe_batch_size, num_workers=16)
+        dataloader = DataLoader(dataset, batch_size=args.vibe_batch_size, num_workers=16, shuffle = False)
 
         with torch.no_grad():
 
@@ -341,9 +393,6 @@ if __name__ == '__main__':
     parser.add_argument('--vid_file', type=str,
                         help='input video path or youtube link')
     
-    
-
-
     parser.add_argument('--output_folder', type=str,
                         help='output folder to write results')
 
@@ -362,7 +411,7 @@ if __name__ == '__main__':
     parser.add_argument('--staf_dir', type=str, default='/home/mkocabas/developments/openposetrack',
                         help='path to directory STAF pose tracking method installed.')
 
-    parser.add_argument('--vibe_batch_size', type=int, default=450,
+    parser.add_argument('--vibe_batch_size', type=int, default=90,
                         help='batch size of VIBE')
 
     parser.add_argument('--display', action='store_true',

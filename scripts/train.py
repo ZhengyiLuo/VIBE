@@ -14,7 +14,12 @@
 #
 # Contact: ps-license@tuebingen.mpg.de
 
+import glob
 import os
+import sys
+import pdb
+import os.path as osp
+sys.path.append(os.getcwd())
 os.environ['PYOPENGL_PLATFORM'] = 'egl'
 
 import torch

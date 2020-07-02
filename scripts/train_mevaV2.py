@@ -75,7 +75,7 @@ def main(cfg):
 
     # ========= Initialize networks, optimizers and lr_schedulers ========= #
     # generator = MEVA(
-    generator = MEVA(
+    generator = MEVAV2(
         n_layers=cfg.MODEL.TGRU.NUM_LAYERS,
         batch_size=cfg.TRAIN.BATCH_SIZE,
         seqlen=cfg.DATASET.SEQLEN,

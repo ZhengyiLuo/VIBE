@@ -15,6 +15,11 @@
 # Contact: ps-license@tuebingen.mpg.de
 
 import os
+import glob
+import sys
+import pdb
+import os.path as osp
+sys.path.append(os.getcwd())
 os.environ['PYOPENGL_PLATFORM'] = 'egl'
 
 import glob
@@ -102,37 +107,37 @@ def main(cfg):
     gen_optimizer = get_optimizer(
         model=generator,
         optim_type=cfg.TRAIN.GEN_OPTIM,
-        lr=cfg.TRAIN.GEN_LR,uy
+        lr=cfg.TRAIN.GEN_LR,
         weight_decay=cfg.TRAIN.GEN_WD,
         momentum=cfg.TRAIN.GEN_MOMENTUM,
     )
 
-    motion_discriminator = MotionDiscriminator(
-        rnn_size=cfg.TRAIN.MOT_DISCR.HIDDEN_SIZE,
-        input_size=69,
-        num_layers=cfg.TRAIN.MOT_DISCR.NUM_LAYERS,
-        output_size=1,
-        feature_pool=cfg.TRAIN.MOT_DISCR.FEATURE_POOL,
-        attention_size=None if cfg.TRAIN.MOT_DISCR.FEATURE_POOL !='attention' else cfg.TRAIN.MOT_DISCR.ATT.SIZE,
-        attention_layers=None if cfg.TRAIN.MOT_DISCR.FEATURE_POOL !='attention' else cfg.TRAIN.MOT_DISCR.ATT.LAYERS,
-        attention_dropout=None if cfg.TRAIN.MOT_DISCR.FEATURE_POOL !='attention' else cfg.TRAIN.MOT_DISCR.ATT.DROPOUT
-    ).to(cfg.DEVICE)
+    # motion_discriminator = MotionDiscriminator(
+    #     rnn_size=cfg.TRAIN.MOT_DISCR.HIDDEN_SIZE,
+    #     input_size=69,
+    #     num_layers=cfg.TRAIN.MOT_DISCR.NUM_LAYERS,
+    #     output_size=1,
+    #     feature_pool=cfg.TRAIN.MOT_DISCR.FEATURE_POOL,
+    #     attention_size=None if cfg.TRAIN.MOT_DISCR.FEATURE_POOL !='attention' else cfg.TRAIN.MOT_DISCR.ATT.SIZE,
+    #     attention_layers=None if cfg.TRAIN.MOT_DISCR.FEATURE_POOL !='attention' else cfg.TRAIN.MOT_DISCR.ATT.LAYERS,
+    #     attention_dropout=None if cfg.TRAIN.MOT_DISCR.FEATURE_POOL !='attention' else cfg.TRAIN.MOT_DISCR.ATT.DROPOUT
+    # ).to(cfg.DEVICE)
 
-    dis_motion_optimizer = get_optimizer(
-        model=motion_discriminator,
-        optim_type=cfg.TRAIN.MOT_DISCR.OPTIM,
-        lr=cfg.TRAIN.MOT_DISCR.LR,
-        weight_decay=cfg.TRAIN.MOT_DISCR.WD,
-        momentum=cfg.TRAIN.MOT_DISCR.MOMENTUM
-    )
+    # dis_motion_optimizer = get_optimizer(
+    #     model=motion_discriminator,
+    #     optim_type=cfg.TRAIN.MOT_DISCR.OPTIM,
+    #     lr=cfg.TRAIN.MOT_DISCR.LR,
+    #     weight_decay=cfg.TRAIN.MOT_DISCR.WD,
+    #     momentum=cfg.TRAIN.MOT_DISCR.MOMENTUM
+    # )
 
-    motion_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        dis_motion_optimizer,
-        mode='min',
-        factor=0.1,
-        patience=cfg.TRAIN.LR_PATIENCE,
-        verbose=True,
-    )
+    # motion_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    #     dis_motion_optimizer,
+    #     mode='min',
+    #     factor=0.1,
+    #     patience=cfg.TRAIN.LR_PATIENCE,
+    #     verbose=True,
+    # )
 
     lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         gen_optimizer,
@@ -143,6 +148,9 @@ def main(cfg):
     )
 
     # ========= Start Training ========= #
+    motion_discriminator = None
+    dis_motion_optimizer = None
+    motion_lr_scheduler = None
     Trainer(
         data_loaders=data_loaders,
         generator=generator,

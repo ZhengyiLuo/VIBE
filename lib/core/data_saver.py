@@ -34,6 +34,11 @@ from lib.utils.eval_utils import (
 )
 
 # import zen_renderer.renderer.smpl_renderer as smpl_renderer
+# from copycat.smpllib.smpl_mujoco import SMPL_M_Renderer
+# from zen_renderer.utils.transform_utils import vertizalize_smpl_root
+# from zen_renderer.utils.image_utils import assemble_videos
+
+
 logger = logging.getLogger(__name__)
 
 class DataSaver():
@@ -42,14 +47,12 @@ class DataSaver():
             test_loader,
             model,
             device=None,
-            refiner = None,
     ):
         self.test_loader = test_loader
         self.model = model
         self.device = device
 
         self.evaluation_accumulators = dict.fromkeys(['pred_j3d', 'target_j3d', 'target_theta', 'pred_verts'])
-        self.refiner = refiner
         if self.device is None:
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -80,7 +83,7 @@ class DataSaver():
                 inp = target['features']
                 
                 # preds = self.model(inp, J_regressor=J_regressor, refiner = self.refiner)
-                preds = self.model(inp, J_regressor=J_regressor, refiner = None)
+                preds = self.model(inp, J_regressor=J_regressor)
 
                 # convert to 14 keypoint format for evaluation
                 # if self.use_spin:
@@ -102,13 +105,23 @@ class DataSaver():
                 targets_acc.append({k:v.cpu().numpy() if torch.is_tensor(v) else v for k, v in target.items() \
                      if k in ['features', 'theta', 'instance_id']})
                 
-                # renderer = smpl_renderer.SMPL_Renderer(image_size = 400, camera_mode="look_at")
-                # target_pose = target_theta[:,3:75]
-                # pred_pose = preds[-1]['theta'][:,:,3:75].squeeze()
-                # renderer.render_pose_vid(torch.tensor(target_pose), out_file_name = "output/gt{:02d}.mp4".format(i), random_camera = 2, random_shape=False)
-                # renderer.render_pose_vid(torch.tensor(pred_pose), out_file_name = "output/ref{:02d}.mp4".format(i), random_camera = 2, random_shape=False)
 
                 ######################## vis #####################
+                # renderer = SMPL_M_Renderer(render_size = (400, 400))
+                # mocap_pose = vertizalize_smpl_root(torch.tensor(target_theta[:100,3:75]))
+                # meva_pose = vertizalize_smpl_root(preds[-1]['theta'].view(-1, 85)[:100,3:75]).cpu().numpy()
+                
+                # mocap_images = renderer.render_smpl(mocap_pose)
+                # meva_images = renderer.render_smpl(meva_pose)
+
+                # videos = [mocap_images, meva_images]
+                # grid_size = [1,len(videos)]
+                # descriptions = ["Mocap", "VIBE", "MEVA"]
+                # output_name = "{}/output_meva_d{:02d}.mp4".format("/hdd/zen/data/ActmixGenenerator/output/3dpw/mevav2", 0)
+                # print(output_name)
+                # assemble_videos(videos, grid_size, descriptions, output_name)
+                ######################## vis #####################
+
                 del target, preds
                 torch.cuda.empty_cache()
             # =============>
@@ -125,11 +138,11 @@ class DataSaver():
 
         logger.info(summary_string)
 
-        vibe_3dpw_res = {
+        meva_3dpw_res = {
             "preds": preds_acc,
             "targets": targets_acc,
         }
-        # pk.dump(vibe_3dpw_res, open("3dpw_vibe_res.pkl", "wb"))
+        pk.dump(meva_3dpw_res, open("3dpw_meva_res.pkl", "wb"))
         # pk.dump(vibe_3dpw_res, open("/hdd/zen/data/ActBound/AMASS/amass_vibe_train_res.pkl", "wb"))
         # pk.dump(vibe_3dpw_res, open("/hdd/zen/data/ActBound/AMASS/3dpw_train_res.pkl", "wb"))
         # pk.dump(vibe_3dpw_res, open("/hdd/zen/data/ActBound/AMASS/3dpw_test_res.pkl", "wb"))

@@ -27,6 +27,8 @@ from lib.utils.utils import move_dict_to_device, AverageMeter
 import pickle as pk
 
 from lib.utils.eval_utils import (
+    compute_vel, 
+    compute_error_vel,
     compute_accel,
     compute_error_accel,
     compute_error_verts,
@@ -42,14 +44,12 @@ class Evaluator():
             test_loader,
             model,
             device=None,
-            refiner = None,
     ):
         self.test_loader = test_loader
         self.model = model
         self.device = device
 
         self.evaluation_accumulators = dict.fromkeys(['pred_j3d', 'target_j3d', 'target_theta', 'pred_verts'])
-        self.refiner = refiner
         if self.device is None:
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -78,7 +78,7 @@ class Evaluator():
                 inp = target['features']
                 
                 # preds = self.model(inp, J_regressor=J_regressor, refiner = self.refiner)
-                preds = self.model(inp, J_regressor=J_regressor, refiner = None)
+                preds = self.model(inp, J_regressor=J_regressor)
 
                 # convert to 14 keypoint format for evaluation
                 # if self.use_spin:
@@ -136,7 +136,6 @@ class Evaluator():
         pred_pelvis = (pred_j3ds[:,[2],:] + pred_j3ds[:,[3],:]) / 2.0
         target_pelvis = (target_j3ds[:,[2],:] + target_j3ds[:,[3],:]) / 2.0
 
-
         pred_j3ds -= pred_pelvis
         target_j3ds -= target_pelvis
 
@@ -155,6 +154,8 @@ class Evaluator():
         pve = np.mean(compute_error_verts(target_theta=target_theta, pred_verts=pred_verts)) * m2mm
         accel = np.mean(compute_accel(pred_j3ds)) * m2mm
         accel_err = np.mean(compute_error_accel(joints_pred=pred_j3ds, joints_gt=target_j3ds)) * m2mm
+        vel = np.mean(compute_vel(pred_j3ds)) * m2mm
+        vel_err = np.mean(compute_error_vel(joints_pred=pred_j3ds, joints_gt=target_j3ds)) * m2mm
         mpjpe = np.mean(errors) * m2mm
         pa_mpjpe = np.mean(errors_pa) * m2mm
 
@@ -163,7 +164,9 @@ class Evaluator():
             'pa-mpjpe': pa_mpjpe,
             'pve': pve,
             'accel': accel,
-            'accel_err': accel_err
+            'accel_err': accel_err,
+            "vel": vel, 
+            "vel_err": vel_err
         }
 
         log_str = ' '.join([f'{k.upper()}: {v:.4f},'for k,v in eval_dict.items()])

@@ -21,6 +21,7 @@ import logging
 import numpy as np
 import os.path as osp
 from progress.bar import Bar
+from tqdm import tqdm
 
 from lib.core.config import VIBE_DATA_DIR
 from lib.utils.utils import move_dict_to_device, AverageMeter
@@ -128,15 +129,15 @@ class Trainer():
         }
 
         self.generator.train()
-        self.motion_discriminator.train()
+        # self.motion_discriminator.train()
 
         start = time.time()
 
         summary_string = ''
 
-        bar = Bar(f'Epoch {self.epoch + 1}/{self.end_epoch}', fill='#', max=self.num_iters_per_epoch)
-
-        for i in range(self.num_iters_per_epoch):
+        # bar = Bar(f'Epoch {self.epoch + 1}/{self.end_epoch}', fill='#', max=self.num_iters_per_epoch)
+        pbar = tqdm(range(self.num_iters_per_epoch))
+        for i in pbar:
             # Dirty solution to reset an iterator
             target_2d = target_3d = None
             if self.train_2d_iter:
@@ -200,14 +201,15 @@ class Trainer():
             gen_loss.backward()
             self.gen_optimizer.step()
 
-            if self.train_global_step % self.dis_motion_update_steps == 0:
-                self.dis_motion_optimizer.zero_grad()
-                motion_dis_loss.backward()
-                self.dis_motion_optimizer.step()
+            # if self.train_global_step % self.dis_motion_update_steps == 0:
+                # self.dis_motion_optimizer.zero_grad()
+                # motion_dis_loss.backward()
+                # self.dis_motion_optimizer.step()
             # =======>
 
             # <======= Log training info
-            total_loss = gen_loss + motion_dis_loss
+            # total_loss = gen_loss + motion_dis_loss
+            total_loss = gen_loss
 
             losses.update(total_loss.item(), inp.size(0))
 
@@ -215,15 +217,16 @@ class Trainer():
             timer['batch'] = timer['data'] + timer['forward'] + timer['loss'] + timer['backward']
             start = time.time()
 
-            summary_string = f'({i + 1}/{self.num_iters_per_epoch}) | Total: {bar.elapsed_td} | ' \
-                             f'ETA: {bar.eta_td:} | loss: {losses.avg:.4f}'
+            # summary_string = f'({i + 1}/{self.num_iters_per_epoch}) | Total: {bar.elapsed_td} | ' \
+            #                  f'ETA: {bar.eta_td:} | loss: {losses.avg:.4f}'
+            summary_string = '| loss: {:.4f}'.format(losses.avg)
 
             for k, v in loss_dict.items():
                 summary_string += f' | {k}: {v:.2f}'
                 self.writer.add_scalar('train_loss/'+k, v, global_step=self.train_global_step)
 
-            for k,v in timer.items():
-                summary_string += f' | {k}: {v:.2f}'
+            # for k,v in timer.items():
+            #     summary_string += ' | {}: {:.2f}'.format(k, v)
 
             self.writer.add_scalar('train_loss/loss', total_loss.item(), global_step=self.train_global_step)
 
@@ -237,14 +240,15 @@ class Trainer():
                 self.writer.add_video('train-video', vid_tensor, global_step=self.train_global_step, fps=10)
 
             self.train_global_step += 1
-            bar.suffix = summary_string
-            bar.next()
+            # bar.suffix = summary_string
+            # bar.next()
+            pbar.set_description(summary_string)
 
             if torch.isnan(total_loss):
                 exit('Nan value in loss, exiting!...')
             # =======>
 
-        bar.finish()
+        # bar.finish()
 
         logger.info(summary_string)
 
@@ -329,9 +333,9 @@ class Trainer():
                 print(f'Learning rate {param_group["lr"]}')
                 self.writer.add_scalar('lr/gen_lr', param_group['lr'], global_step=self.epoch)
 
-            for param_group in self.dis_motion_optimizer.param_groups:
-                print(f'Learning rate {param_group["lr"]}')
-                self.writer.add_scalar('lr/dis_lr', param_group['lr'], global_step=self.epoch)
+            # for param_group in self.dis_motion_optimizer.param_groups:
+            #     print(f'Learning rate {param_group["lr"]}')
+            #     self.writer.add_scalar('lr/dis_lr', param_group['lr'], global_step=self.epoch)
 
             logger.info(f'Epoch {epoch+1} performance: {performance:.4f}')
 
@@ -348,8 +352,8 @@ class Trainer():
             'gen_state_dict': self.generator.state_dict(),
             'performance': performance,
             'gen_optimizer': self.gen_optimizer.state_dict(),
-            'disc_motion_state_dict': self.motion_discriminator.state_dict(),
-            'disc_motion_optimizer': self.dis_motion_optimizer.state_dict(),
+            # 'disc_motion_state_dict': self.motion_discriminator.state_dict(),
+            # 'disc_motion_optimizer': self.dis_motion_optimizer.state_dict(),
         }
 
         filename = osp.join(self.logdir, 'checkpoint.pth.tar')
@@ -376,9 +380,9 @@ class Trainer():
             self.gen_optimizer.load_state_dict(checkpoint['gen_optimizer'])
             self.best_performance = checkpoint['performance']
 
-            if 'disc_motion_optimizer' in checkpoint.keys():
-                self.motion_discriminator.load_state_dict(checkpoint['disc_motion_state_dict'])
-                self.dis_motion_optimizer.load_state_dict(checkpoint['disc_motion_optimizer'])
+            # if 'disc_motion_optimizer' in checkpoint.keys():
+                # self.motion_discriminator.load_state_dict(checkpoint['disc_motion_state_dict'])
+                # self.dis_motion_optimizer.load_state_dict(checkpoint['disc_motion_optimizer'])
 
             logger.info(f"=> loaded checkpoint '{model_path}' "
                   f"(epoch {self.start_epoch}, performance {self.best_performance})")

@@ -342,3 +342,14 @@ def rot6d_to_rotmat(x):
     rot_mats = torch.stack([b1, b2, b3], dim=-1)
 
     return rot_mats
+
+def rotmat_to_6d(poses):
+    if torch.is_tensor(poses):
+        curr_pose = poses.to(poses.device).float().reshape(-1, 3, 3)
+    else:
+        curr_pose = torch.tensor(poses).to(poses.device).float().reshape(-1, 3, 3)
+
+
+    orth6d = curr_pose[:,:,:2].reshape(-1, 6)
+    orth6d = orth6d.view(poses.shape[0], -1, 6) 
+    return orth6d

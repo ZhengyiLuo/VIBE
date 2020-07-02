@@ -3,7 +3,7 @@ DEBUG_FREQ: 5
 LOGDIR: ''
 DEVICE: 'cuda'
 EXP_NAME: 'meva'
-OUTPUT_DIR: 'results/meva'
+OUTPUT_DIR: 'results/mevaV2_150'
 NUM_WORKERS: 8
 SEED_VALUE: -1
 LOSS:
@@ -15,16 +15,16 @@ LOSS:
 DATASET:
   SEQLEN: 90
 TRAIN:
-  BATCH_SIZE: 32
+  BATCH_SIZE: 16
   NUM_ITERS_PER_EPOCH: 500
   # PRETRAINED: 'data/vibe_data/vibe_model_wo_3dpw.pth.tar'
   # PRETRAINED: 'results/meva/30-06-2020_13-35-09_meva/model_best.pth.tar'
-  PRETRAINED: 'results/meva/02-07-2020_16-13-51_meva/model_best.pth.tar'
+  # PRETRAINED: 'results/meva/01-07-2020_19-45-55_meva/model_best.pth.tar'
   PRETRAINED_REGRESSOR: 'data/vibe_data/spin_model_checkpoint.pth.tar'
   RESUME: ''
   START_EPOCH: 0
   END_EPOCH: 100
-  LR_PATIENCE: 10
+  LR_PATIENCE: 5
   DATA_2D_RATIO: 0.6
   DATASETS_2D: 
    - 'Insta'

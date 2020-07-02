@@ -241,7 +241,7 @@ class Regressor(nn.Module):
 
 
 
-    def forward(self, x, init_pose=None, init_shape=None, init_cam=None, n_iter=3, J_regressor=None, refiner = None):
+    def forward(self, x, init_pose=None, init_shape=None, init_cam=None, n_iter=3, J_regressor=None):
         batch_size = x.shape[0]
 
         if init_pose is None:
@@ -265,17 +265,7 @@ class Regressor(nn.Module):
             pred_cam = self.deccam(xc) + pred_cam
 
 
-        pred_rotmat = rot6d_to_rotmat(pred_pose).view(batch_size, 24, 3, 3)
-
-        ########## Pose Refinement Injection  ##########
-        if refiner != None and pred_pose.shape[0] == 150:
-            pred_pose_6d = compute_orth6d_from_rotation_matrix(pred_rotmat.view(batch_size * 24, 3, 3)).view(batch_size, 144)
-            pred_pose = refiner.refine_pose(pred_pose_6d[None, :])
-            pred_pose = pred_pose.view(pred_pose.shape[0], -1) # Stack up all input poses
-            pred_rotmat = convert_orth_6d_to_mat(pred_pose).view(batch_size, 24, 3, 3)
-            
-        ########## Pose Refinement Injection  ##########
-
+        pred_rotmat = rot6d_to_rotmat(pred_pose).reshape(batch_size, 24, 3, 3)
 
         pred_output = self.smpl(
             betas=pred_shape,

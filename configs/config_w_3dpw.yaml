@@ -7,7 +7,7 @@ OUTPUT_DIR: 'results/vibe_w_3dpw'
 NUM_WORKERS: 8
 SEED_VALUE: -1
 DATASET:
-  SEQLEN: 16
+  SEQLEN: 90
 LOSS:
   KP_2D_W: 300.0
   KP_3D_W: 300.0

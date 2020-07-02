@@ -13,7 +13,7 @@ import h5py
 
 from lib.dataset import *
 from lib.models import VIBE
-from lib.models.smpl import SMPL, SMPL_MODEL_DIR
+from lib.models.smpl import SMPL, SMPL_MODEL_DIR, H36M_TO_J14
 from lib.core.config import parse_args
 from torch.utils.data import DataLoader
 from lib.core.config import VIBE_DATA_DIR, VIBE_DB_DIR
@@ -36,6 +36,20 @@ def keypoint_loss(body_pose, betas, pred_cam, gt_j2d, smpl):
     diff = pred_keypoints_2d -  gt_j2d[:, :, :-1]
     loss = (conf * diff.pow(2)).sum()/pred_keypoints_2d.shape[0]
     return loss, pred_keypoints_2ds
+
+def smpl_to_j3d(body_pose, betas, smpl, J_regressor):
+    pred_output = smpl(
+            betas=betas,
+            body_pose=body_pose[:,1:],
+            global_orient=body_pose[:, 0:1],
+        )
+    pred_joints = pred_output.joints
+    pred_vertices = pred_output.vertices
+    if J_regressor is not None:
+        J_regressor_batch = J_regressor[None, :].expand(pred_vertices.shape[0], -1, -1).to(pred_vertices.device)
+        pred_joints = torch.matmul(J_regressor_batch, pred_vertices)
+        pred_joints = pred_joints[:, H36M_TO_J14, :]
+    return pred_joints
 
 if __name__ == "__main__":
     cfg, cfg_file = parse_args()
@@ -76,35 +90,65 @@ if __name__ == "__main__":
     t_total = 16
 
     ################## 3dpw ##################
-    # dataset_setting = "test"
-    # dataset_3dpw = joblib.load("/hdd/zen/data/video_pose/vibe_db/3dpw_{}_db.pt".format(dataset_setting))
-    # vid_names = dataset_3dpw['vid_name']
-    # thetas = dataset_3dpw['pose']
-    # features = dataset_3dpw['features']
+    dataset_setting = "test"
+    dataset_3dpw = joblib.load("/hdd/zen/data/video_pose/vibe_db/3dpw_{}_db.pt".format(dataset_setting))
+    vid_names = dataset_3dpw['vid_name']
+    thetas = dataset_3dpw['pose']
+    features = dataset_3dpw['features']
+    j3ds = dataset_3dpw['joints3D']
+    shapes = dataset_3dpw['shape']
+    dataset_3dpw_save = {}
+    m2mm = 1000
+    mpjpe_acc = 0
+    with torch.no_grad():
+        for idx in tqdm(range(len(np.unique(vid_names)))):
+            curr_name = np.unique(vid_names)[idx]
+            vid_idxes = np.where(vid_names == curr_name)
+            curr_thetas = thetas[vid_idxes]
+            curr_feats = torch.tensor(features[vid_idxes]).to(cfg.DEVICE)
+            # curr_j3ds = j3ds[vid_idxes]
+            curr_shape = shapes[vid_idxes]
+            curr_j3ds = smpl_to_j3d(torch.tensor(curr_thetas).to(cfg.DEVICE), torch.tensor(curr_shape).to(cfg.DEVICE), smpl, J_regressor).cpu().numpy()
+            
 
-    # dataset_3dpw_save = {}
+            feats_chunks = torch.split(curr_feats, t_total, dim=0)
+            vibe_acc = []
+            j3d_acc = []
+            beta_acc = []
 
-    # with torch.no_grad():
-    #     for idx in tqdm(range(len(np.unique(vid_names)))):
-    #         curr_name = np.unique(vid_names)[idx]
-    #         vid_idxes = np.where(vid_names == curr_name)
-    #         curr_thetas = thetas[vid_idxes]
-    #         curr_feats = torch.tensor(features[vid_idxes]).to(cfg.DEVICE)
+            for feats_chunk in feats_chunks:
+                preds = model(feats_chunk[None, ], J_regressor=J_regressor)
+                theta_pred = preds[-1]['theta'][0,:,3:75]
+                beta_pred = preds[-1]['theta'][0,:,75:]
+                beta_acc.append(beta_pred.cpu().numpy())
+                vibe_acc.append(theta_pred.cpu().numpy())
+                j3d_pred = smpl_to_j3d(theta_pred, beta_pred, smpl, J_regressor)
+                # j3d_acc.append(preds[-1]['kp_3d'].cpu().numpy()[0])
+                j3d_acc.append(j3d_pred.cpu().numpy())
+                
+            vibe_acc = np.vstack(vibe_acc)
+            j3d_acc = np.vstack(j3d_acc)
+            beta_acc = np.vstack(beta_acc)
 
 
-    #         feats_chunks = torch.split(curr_feats, t_total, dim=0)
-    #         vibe_acc = []
-
-    #         for feats_chunk in feats_chunks:
-    #             preds = model(feats_chunk[None, ], J_regressor=J_regressor)
-    #             vibe_acc.append(preds[-1]['theta'][:,:,3:75].cpu().numpy().squeeze())
-    #         vibe_acc = np.vstack(vibe_acc)
-    #         dataset_3dpw_save[curr_name]  = {
-    #             'target_traj' : curr_thetas, 
-    #             'feat': curr_feats.cpu().numpy(), 
-    #             'traj': vibe_acc
-    #         }
-    # joblib.dump(dataset_3dpw_save, "/hdd/zen/data/ActBound/AMASS/3dpw_{}_res.pkl".format(dataset_setting))
+            pred_pelvis = (j3d_acc[:,[2],:] + j3d_acc[:,[3],:]) / 2.0
+            target_pelvis = (curr_j3ds[:,[2],:] + curr_j3ds[:,[3],:]) / 2.0
+            j3d_acc -= pred_pelvis
+            curr_j3ds -= target_pelvis
+            # Absolute error (MPJPE)
+            errors = np.sqrt(((j3d_acc - curr_j3ds) ** 2).sum(axis=-1)).mean(axis=-1)
+            mpjpe_acc += np.mean(errors) * m2mm
+            import pdb
+            pdb.set_trace()
+            dataset_3dpw_save[curr_name]  = {
+                'target_traj' : curr_thetas, 
+                'feat': curr_feats.cpu().numpy(),
+                "target_beta" : curr_shape,
+                'traj': vibe_acc, 
+                'traj_beta': beta_acc
+            }
+        print(mpjpe_acc/(idx + 1))
+    joblib.dump(dataset_3dpw_save, "/hdd/zen/data/ActBound/AMASS/3dpw_{}_res.pkl".format(dataset_setting))
     ################## 3dpw ##################
 
 
@@ -148,26 +192,26 @@ if __name__ == "__main__":
     ################## Insta Var ##################
 
     ################## PennAction ##################
-    dataset_name = 'pennaction'
-    db = PennAction(seqlen=cfg.DATASET.SEQLEN, debug=False)
+    # dataset_name = 'pennaction'
+    # db = PennAction(seqlen=cfg.DATASET.SEQLEN, debug=False)
 
-    test_loader = DataLoader(
-        dataset=db,
-        batch_size=1,
-        shuffle=False,
-        num_workers=1,
-    )
+    # test_loader = DataLoader(
+    #     dataset=db,
+    #     batch_size=1,
+    #     shuffle=False,
+    #     num_workers=1,
+    # )
 
-    import matplotlib.pyplot as plt
-    for i in test_loader:
-        kp_2d = i['kp_2d']
-        # video = i['video']
-        # import pdb
-        # pdb.set_trace()
-        # print(kp_2d)
-        # plt.scatter(kp_2d[0,0,:,0], kp_2d[0, 0, :,1])
-        # plt.show()
-    exit(0)
+    # import matplotlib.pyplot as plt
+    # for i in test_loader:
+    #     kp_2d = i['kp_2d']
+    #     # video = i['video']
+    #     # import pdb
+    #     # pdb.set_trace()
+    #     # print(kp_2d)
+    #     # plt.scatter(kp_2d[0,0,:,0], kp_2d[0, 0, :,1])
+    #     # plt.show()
+    # exit(0)
 
     # db_file = osp.join(VIBE_DB_DIR, '{}_train_db.pt').format(dataset_name)
     # dataset_db = joblib.load(db_file)

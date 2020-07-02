@@ -99,14 +99,14 @@ class VIBE(nn.Module):
             print(f'=> loaded pretrained model from \'{pretrained}\'')
 
 
-    def forward(self, input, J_regressor=None, refiner = None):
+    def forward(self, input, J_regressor=None):
         # input size NTF
         batch_size, seqlen = input.shape[:2]
 
         feature = self.encoder(input)
         feature = feature.reshape(-1, feature.size(-1))
 
-        smpl_output = self.regressor(feature, J_regressor=J_regressor, refiner = refiner)
+        smpl_output = self.regressor(feature, J_regressor=J_regressor)
         for s in smpl_output:
             s['theta'] = s['theta'].reshape(batch_size, seqlen, -1)
             s['verts'] = s['verts'].reshape(batch_size, seqlen, -1, 3)

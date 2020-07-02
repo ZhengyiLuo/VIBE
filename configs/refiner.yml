@@ -16,25 +16,25 @@ DATASET:
   SEQLEN: 90
 TRAIN:
   BATCH_SIZE: 24
-  NUM_ITERS_PER_EPOCH: 2000
-  PRETRAINED: 'data/vibe_data/vibe_model_wo_3dpw.pth.tar'
-  # PRETRAINED: 'results/vibe_tests/25-05-2020_23-54-16_vibe_test/model_best.pth.tar'
+  NUM_ITERS_PER_EPOCH: 500
+  PRETRAINED_VIBE: 'data/vibe_data/vibe_model_wo_3dpw.pth.tar'
+  # PRETRAINED: 'results/refiner/28-06-2020_23-31-37_refiner/model_best.pth.tar'
   # PRETRAINED: 'results/vibe_tests/27-05-2020_14-17-13_vibe_test/model_best.pth.tar'
   PRETRAINED_REGRESSOR: 'data/vibe_data/spin_model_checkpoint.pth.tar'
   RESUME: ''
   START_EPOCH: 0
   END_EPOCH: 100
   LR_PATIENCE: 20
-  DATA_2D_RATIO: 0.4
+  DATA_2D_RATIO: 0.6
   DATASETS_2D: 
-   - 'Insta'
+  #  - 'Insta'
   #  - 'PoseTrack'
-  #  - 'PennAction'
+   - 'PennAction'
   DATASETS_3D:
-    - 'ThreeDPW'
+    - 'ThreeDPW' 
     - 'MPII3D'
   DATASET_EVAL: 'ThreeDPW'
-  GEN_LR: 0.0006
+  GEN_LR: 0.00005
   GEN_WD: 0.0
   MOT_DISCR:
     OPTIM: 'Adam'

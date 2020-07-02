@@ -5,6 +5,22 @@ import torch
 import numpy as np
 
 
+def compute_vel(joints):
+    velocities = joints[1:] - joints[:-1]
+    velocity_normed = np.linalg.norm(velocities, axis=2)
+    return np.mean(velocity_normed, axis=1)
+
+
+def compute_error_vel(joints_gt, joints_pred, vis = None):
+    vel_gt = joints_gt[1:] - joints_gt[:-1] 
+    vel_pred = joints_pred[1:] - joints_pred[:-1]
+    normed = np.linalg.norm(vel_pred - vel_gt, axis=2)
+
+    if vis is None:
+        new_vis = np.ones(len(normed), dtype=bool)
+    return np.mean(normed[new_vis], axis=1)
+    
+
 def compute_accel(joints):
     """
     Computes acceleration of 3D joints.

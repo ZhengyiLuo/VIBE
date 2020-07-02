@@ -36,38 +36,18 @@ class Insta(Dataset):
 
         with h5py.File(self.h5_file, 'r') as db:
             self.db = db
-            self.vid_names = vid_names = np.array(self.db['vid_name'])
-            self.unique_names = unique_names = np.unique(vid_names)
-            self.vid_start = vid_start = {}
-            self.vid_lengths = vid_lengths = {}
-            for u_name in unique_names:
-                finds = np.where(vid_names== u_name)[0]
-                vid_start[u_name] = finds[0]
-                vid_lengths[u_name] = len(finds)
-            
-            self.data_keys = data_keys = []
-            for k, v in vid_lengths.items():
-                if vid_lengths[k] > seqlen:
-                    [self.data_keys.append(k) for i in range(vid_lengths[k]//seqlen)]
-
-            print("Number of videos: ", len(self.unique_names))    
-            print("Number of sampled sequences: ", len(self.data_keys))
+            self.vid_indices = split_into_chunks(self.db['vid_name'], self.seqlen, self.stride)
 
         print(f'InstaVariety number of dataset objects {self.__len__()}')
 
     def __len__(self):
-        return len(self.data_keys)
+        return len(self.vid_indices)
 
     def __getitem__(self, index):
         return self.get_single_item(index)
 
     def get_single_item(self, index):
-        curr_key = self.data_keys[index]
-        curr_length = self.vid_lengths[curr_key]
-        vid_start = self.vid_start[curr_key]
-
-        start_index = (torch.randint(curr_length - self.seqlen, (1, )) + vid_start if curr_length - self.seqlen != 0 else vid_start).long()
-        end_index = (start_index + self.seqlen - 1).long()
+        start_index, end_index = self.vid_indices[index]
 
         with h5py.File(self.h5_file, 'r') as db:
             self.db = db
@@ -75,6 +55,7 @@ class Insta(Dataset):
             kp_2d = self.db['joints2D'][start_index:end_index + 1]
             kp_2d = convert_kps(kp_2d, src='insta', dst='spin')
             kp_2d_tensor = np.ones((self.seqlen, 49, 3), dtype=np.float16)
+
 
             input = torch.from_numpy(self.db['features'][start_index:end_index+1]).float()
 
